@@ -79,7 +79,7 @@ function getFormattedTime() {
 	return new Intl.DateTimeFormat(locale, options).format(date);
 }
 
-const defaultLogFormat = (logContext) => {
+const defaultLogFormat = (logContext, ...args) => {
 	const { type, typeColor, filename, functionName, lineNumber } = logContext;
 	return `${typeColor}${getFormattedTime()} [${type}]${colors.Reset} ${filename} - Line ${lineNumber} (${colors['FgGreen']}${functionName}${colors['Reset']}):`;
 };
@@ -90,7 +90,7 @@ const getDefaultFormatArgsFunctionForError = function (formatErrorFunction) {
 		const err = args.pop();
 		return `${args.join(' ')}${args.length > 0 ? ' ' : ''}${err instanceof Error ? formatErrorFunction(err) : err}`;
 	};
-}
+};
 const getDefaultFormatArgsFunction = (type) => {
 	switch (type) {
 		case 'INFO':
@@ -101,7 +101,7 @@ const getDefaultFormatArgsFunction = (type) => {
 				? getDefaultFormatArgsFunctionForError(formatErr)
 				: getDefaultFormatArgsFunctionForError((err) => err.stack);
 	}
-}
+};
 const getDefaultShouldLogFunction = (type) => {
 	switch (type) {
 		case 'INFO':
