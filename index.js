@@ -1,70 +1,76 @@
 'use strict';
+const fs = require("fs");
 const path = require("path");
 
-const colors = {
-    Reset: "\x1b[0m",
-    Bright: "\x1b[1m",
-    Dim: "\x1b[2m",
-    Underscore: "\x1b[4m",
-    Blink: "\x1b[5m",
-    Reverse: "\x1b[7m",
-    Hidden: "\x1b[8m",
+const config = JSON.parse(fs.readFileSync('config.json', 'utf8'))["extend-console"];
+const colors = config.colors;
+const timezone = config.timezone;
+const locale = config.locale;
 
-    FgBlack: "\x1b[30m",
-    FgRed: "\x1b[31m",
-    FgGreen: "\x1b[32m",
-    FgYellow: "\x1b[33m",
-    FgBlue: "\x1b[34m",
-    FgMagenta: "\x1b[35m",
-    FgCyan: "\x1b[36m",
-    FgWhite: "\x1b[37m",
-
-    BgBlack: "\x1b[40m",
-    BgRed: "\x1b[41m",
-    BgGreen: "\x1b[42m",
-    BgYellow: "\x1b[43m",
-    BgBlue: "\x1b[44m",
-    BgMagenta: "\x1b[45m",
-    BgCyan: "\x1b[46m",
-    BgWhite: "\x1b[47m"
-};
-
-function getFormattedTime() {
-    const date = Date.now();
-    const options = { timeZone: 'Europe/Paris', hour: '2-digit', minute: '2-digit', second: '2-digit' };
-    return new Intl.DateTimeFormat('fr-FR', options).format(date);
-}
-
-function logFormat(logContext) {
-    const { typeColor, type, filename, line, callContext } = logContext;
-    return `${typeColor}${getFormattedTime()} [${type}]${colors.Reset} ${filename} - Line ${line} (${colors['FgGreen']}${callContext}${colors['Reset']}):`;
-}
-
-const defaultFormatArgsFunction = (logContext, ...args) => args.join(' ');
-const defaultShouldLogFunction = (logContext, ...args) => true;
-
-function logFactory(logger, type, typeColor, defaultFormatArgs = defaultFormatArgsFunction, defaultShouldLog = defaultShouldLogFunction) {
-    return function (filename, formatArgs = defaultFormatArgs, shouldLog = defaultShouldLog) {
-        return function (line, callContext, ...args) {
-            const logContext = { typeColor, type, filename, line, callContext };
-            if (!shouldLog(logContext, ...args)) return;
-            logger(logFormat(logContext), formatArgs(logContext, ...args));
+function getFilenamesFormatFunction(condition, projectRoot) {
+    return function (filePath) {
+        const filename = path.basename(filePath);
+        switch (condition) {
+            case 'filename':
+                return filename;
+            case 'relative':
+                return projectRoot ? path.relative(projectRoot, filePath) : filePath;
+            default:
+                return filePath;
         }
     };
 }
 
-const parseErrStackRegex = new RegExp(' +at (?:(.+?) )?\\(?([^)]+?).js:(\\d+)(?::(\\d+))?\\)?', '');
+const logFilenamesFormat = getFilenamesFormatFunction(config.logFilenamesFormat, process.env.projectRoot);
+const errorFilenamesFormat = getFilenamesFormatFunction(config.errorFilenamesFormat, process.env.projectRoot);
+
+const numberRegex = new RegExp('(\\d+)', '');
+const functionNameRegex = new RegExp('^at ([^ ]+) +', '');
+const parseErrStackRegex = new RegExp('at (?:(.+?) )?\\(?([^)]+?.js):(\\d+)(?::(\\d+))?\\)?', '');
+
+function getFormattedTime() {
+    const date = Date.now();
+    const options = { timeZone: timezone, hour: '2-digit', minute: '2-digit', second: '2-digit' };
+    return new Intl.DateTimeFormat(locale, options).format(date);
+}
+
+function logFormat(logContext) {
+    const { type, typeColor, filename, functionName, lineNumber } = logContext;
+    return `${typeColor}${getFormattedTime()} [${type}]${colors.Reset} ${filename} - Line ${lineNumber} (${colors['FgGreen']}${functionName}${colors['Reset']}):`;
+}
+
+const defaultFormatArgs = (logContext, ...args) => args.join(' ');
+const defaultShouldLog = (logContext, ...args) => true;
+
+function getCallContext(err) {
+    // here we can just get the 3rd element of the stack as the call stack is predictable
+	const context = err.stack.split('\n')[2].trim().split(':').reverse();
+    const rowNumber = numberRegex.exec(context[0])[1];
+    const lineNumber = context[1];
+    const filename = logFilenamesFormat(context[2]);
+    const functionName = functionNameRegex.exec(context[3])[1];
+    return { filename, functionName, lineNumber, rowNumber };
+}
+
+function logFactory(logger, type, typeColor, formatArgs = defaultFormatArgs, shouldLog = defaultShouldLog) {
+    return function (...args) {
+        const logContext = { logger, type, typeColor, ...getCallContext(new Error()) };
+        if (!shouldLog(logContext, ...args)) return;
+        logger(logFormat(logContext), formatArgs(logContext, ...args));
+    }
+}
 
 function parseErr(err) {
     const lines = err.stack.split('\n');
     for (const line of lines) {
-        const match = parseErrStackRegex.exec(line);
+        // whereas here we take the first .js file in the stack that is not from the node_modules as the call stack is not predictable
+        const match = parseErrStackRegex.exec(line.trim());
         if (match && !match[2].includes('node_modules')) {
             const functionName = match[1] || '<anonymous>';
-            const filename = path.relative(global.projectRoot, match[2]);
+            const filename = errorFilenamesFormat(match[2]);
             const lineNumber = match[3];
             const rowNumber = match[4] || undefined;
-            return [functionName, filename, lineNumber, rowNumber];
+            return [filename, functionName, lineNumber, rowNumber];
         }
     }
     return null;
@@ -84,23 +90,15 @@ function getFormatArgsForError(formatErrFunction) {
     }
 }
 
-console.createReport = logFactory(console.info, 'INFO', colors.FgCyan);
-console.createReportWarn = logFactory(console.warn, 'WARN', colors.FgYellow);
-console.createReportError = logFactory(console.error, 'ERROR', colors.FgRed,
+console.report = logFactory(console.info, 'INFO', colors.FgCyan);
+console.reportWarn = logFactory(console.warn, 'WARN', colors.FgYellow);
+console.reportError = logFactory(console.error, 'ERROR', colors.FgRed,
     getFormatArgsForError(
         (process.env.format_errors ? process.env.format_errors.toLowerCase() === "true" : true)
             ? formatErr
             : (err) => err.stack
     )
 );
-
-console.createReports = function (filename) {
-    return {
-        report: console.createReport(filename),
-        reportWarn: console.createReportWarn(filename),
-        reportError: console.createReportError(filename)
-    };
-};
 
 console.fitOnTerm = function (text, mustEndWith = '') {
     const processedLines = text.split('\n').map(line => {
@@ -119,13 +117,18 @@ console.fitOnTerm = function (text, mustEndWith = '') {
 };
 
 module.exports = {
-    colors,
+    config,
+    getFilenamesFormatFunction,
+    logFilenamesFormat,
+    errorFilenamesFormat,
+    numberRegex,
+    parseErrStackRegex,
     getFormattedTime,
     logFormat,
-    defaultFormatArgsFunction,
-    defaultShouldLogFunction,
+    defaultFormatArgs,
+    defaultShouldLog,
+    getCallContext,
     logFactory,
-    parseErrStackRegex,
     parseErr,
     formatErr,
     getFormatArgsForError
