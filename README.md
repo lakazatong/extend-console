@@ -1,7 +1,33 @@
 # extend-console
 
-it is recommended to have a `format_errors` and `projectRoot` defined in process.env as well as a `config.json` as shown in this repo
+Requires a `config/config.json` at the root of execution, see the one provided
+
+In all following options, the last is the fallback case
+
+### In `config/config.json`: 
+
+3 possible values for `logFilenamesFormat` and `errorFilenamesFormat`:
+- `filename`
+- `relative` (relative to the `projectRoot` in `process.env` (`projectRoot` excluded), `absolute` if none)
+- `absolute`
+
+### In `process.env`:
+
+2 possible values for `format_errors`:
+- false (logs err.stack instead)
+- true (tries to parse filename, functionName, lineNumber and rowNumber where the error happened)
+
+3 possible values for `logLevel`:
+- 1 (Errors)
+- 2 (Errors + Warnings)
+- 3 (Errors + Warnings + Infos)
+
+If the last argument to `console.reportError` is an Error instance and `format_errors` is not provided in `process.env` or is set to `true`, it will try to parse it
+
+If you absolutely want to report errors where the err is not at the end or you want to report multiple at once, you should provide a formatArgs to `console.createReportError`, for that you might want to check out the `formatErr` and `parseErr` functions provided
 
 ## Example usage
 
-see test.js and its [associated output](https://cdn.discordapp.com/attachments/1147600486212575315/1285703556984475740/image.png?ex=66eb3c3f&is=66e9eabf&hm=3e4db52b18002c17566ff7a65f0b181505c90832a3ce3824ce5131ac559e2685&)
+See `test.js` and its [associated output](extend-console_example_output.jpg)
+
+A more advanced usage can be found [here](https://github.com/Pupariaa/Cordium/blob/main/internals/Events.js) where it provides custom `formatArgs` and `shouldLog` functions to `report`

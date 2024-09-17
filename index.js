@@ -48,9 +48,6 @@ function logFormat(logContext) {
     return `${typeColor}${getFormattedTime()} [${type}]${colors.Reset} ${filename} - Line ${lineNumber} (${colors['FgGreen']}${functionName}${colors['Reset']}):`;
 }
 
-const defaultFormatArgs = (logContext, ...args) => args.join(' ');
-const defaultShouldLog = (logContext, ...args) => true;
-
 function getCallContext(err) {
     // here we can just get the 3rd element of the stack as the call stack is predictable
 	const context = err.stack.split('\n')[2].trim().split(':').reverse();
@@ -58,14 +55,19 @@ function getCallContext(err) {
     const lineNumber = context[1];
     const filename = logFilenamesFormat(context[2]);
     const functionName = functionNameRegex.exec(context[3])[1];
-    return { filename, functionName, lineNumber, rowNumber };
+    return { filename, functionName: functionName === 'Object.<anonymous>' ? 'module' : functionName, lineNumber, rowNumber };
 }
 
-function logFactory(logger, type, typeColor, formatArgs = defaultFormatArgs, shouldLog = defaultShouldLog) {
-    return function (...args) {
-        const logContext = { logger, type, typeColor, ...getCallContext(new Error()) };
-        if (!shouldLog(logContext, ...args)) return;
-        logger(logFormat(logContext), formatArgs(logContext, ...args));
+const defaultFormatArgsFunction = (logContext, ...args) => args.join(' ');
+const defaultShouldLogFunction = (logContext, ...args) => true;
+
+function logFactory(logger, type, typeColor, defaultFormatArgs = defaultFormatArgsFunction, defaultShouldLog = defaultShouldLogFunction) {
+    return function(formatArgs = defaultFormatArgs, shouldLog = defaultShouldLog) {
+        return function (...args) {
+            const logContext = { logger, type, typeColor, ...getCallContext(new Error()) };
+            if (!shouldLog(logContext, ...args)) return;
+            logger(logFormat(logContext), formatArgs(logContext, ...args));
+        }
     }
 }
 
@@ -91,7 +93,7 @@ function formatErr(err) {
     return !parsedErr || parsedErr.every(e => !e) ? errorNameAndMessage : `${errorNameAndMessage} (${parsedErr.filter(e => e).join(':')})`;
 }
 
-function getFormatArgsForError(formatErrFunction) {
+function getDefaultFormatArgsForError(formatErrFunction) {
     return function (logContext, ...args) {
         if (!args.length) return '';
         const err = args.pop();
@@ -99,15 +101,17 @@ function getFormatArgsForError(formatErrFunction) {
     }
 }
 
-console.report = logFactory(console.info, 'INFO', colors.FgCyan);
-console.reportWarn = logFactory(console.warn, 'WARN', colors.FgYellow);
-console.reportError = logFactory(console.error, 'ERROR', colors.FgRed,
-    getFormatArgsForError(
-        (process.env.format_errors ? process.env.format_errors.toLowerCase() === "true" : true)
-            ? formatErr
-            : (err) => err.stack
-    )
-);
+console.createReport = logFactory(console.log, 'INFO', colors.FgCyan);
+console.createReportWarn = logFactory(console.warn, 'WARN', colors.FgYellow);
+console.createReportError = logFactory(console.error, 'ERROR', colors.FgRed, getDefaultFormatArgsForError(
+    (process.env.format_errors ? process.env.format_errors.toLowerCase() === "true" : true)
+        ? formatErr
+        : (err) => err.stack
+));
+
+console.report = console.createReport();
+console.reportWarn = console.createReportWarn();
+console.reportError = console.createReportError();
 
 console.fitOnTerm = function (text, mustEndWith = '') {
     const processedLines = text.split('\n').map(line => {
@@ -131,14 +135,15 @@ module.exports = {
     logFilenamesFormat,
     errorFilenamesFormat,
     numberRegex,
+    functionNameRegex,
     parseErrStackRegex,
     getFormattedTime,
     logFormat,
-    defaultFormatArgs,
-    defaultShouldLog,
     getCallContext,
+    defaultFormatArgsFunction,
+    defaultShouldLogFunction,
     logFactory,
     parseErr,
     formatErr,
-    getFormatArgsForError
+    getDefaultFormatArgsForError
 };

@@ -8,7 +8,7 @@ function testo() {
 
 testo();
 
-console.report('world');
+console.reportWarn('world');
 
 function generateError() {
     throw new Error('test');
