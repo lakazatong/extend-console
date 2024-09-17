@@ -1,6 +1,6 @@
 process.env.projectRoot = __dirname;
 
-require('extend-console');
+require('./index.js');
 
 function testo() {
     console.report('hello');
