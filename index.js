@@ -83,7 +83,7 @@ const defaultLogFormat = (logContext, ...args) => {
 	const { type, typeColor, filename, functionName, lineNumber } = logContext;
 	return `${typeColor}${getFormattedTime()} [${type}]${colors.Reset} ${filename} - Line ${lineNumber} (${colors['FgGreen']}${functionName}${colors['Reset']}):`;
 };
-const defaultFormatArgsFunction = (logContext, ...args) => args.join(' ');
+const defaultFormatArgs = (logContext, ...args) => args.join(' ');
 const getDefaultFormatArgsFunctionForError = function (formatErrorFunction) {
 	return function (logContext, ...args) {
 		if (!args.length) return '';
@@ -95,23 +95,24 @@ const getDefaultFormatArgsFunction = (type) => {
 	switch (type) {
 		case 'INFO':
 		case 'WARN':
-			return defaultFormatArgsFunction;
+			return defaultFormatArgs;
 		case 'ERROR':
 			return (process.env.format_errors ? process.env.format_errors.toLowerCase() === "true" : true)
 				? getDefaultFormatArgsFunctionForError(formatErr)
 				: getDefaultFormatArgsFunctionForError((err) => err.stack);
 	}
 };
+const defaultShouldLog = (logContext, ...args) => true;
 const getDefaultShouldLogFunction = (type) => {
 	switch (type) {
 		case 'INFO':
-			return logLevel >= 3 ? () => true : () => false;
+			return logLevel >= 3 ? defaultShouldLog : (logContext, ...args) => false;
 		case 'WARN':
-			return logLevel >= 2 ? () => true : () => false;
+			return logLevel >= 2 ? defaultShouldLog : (logContext, ...args) => false;
 		case 'ERROR':
-			return logLevel >= 1 ? () => true : () => false;
+			return logLevel >= 1 ? defaultShouldLog : (logContext, ...args) => false;
 		default:
-			return () => true;
+			return defaultShouldLog;
 	}
 };
 
@@ -166,9 +167,10 @@ module.exports = {
 	formatErr,
 	getFormattedTime,
 	defaultLogFormat,
-	defaultFormatArgsFunction,
+	defaultFormatArgs,
 	getDefaultFormatArgsFunctionForError,
 	getDefaultFormatArgsFunction,
+	defaultShouldLog,
 	getDefaultShouldLogFunction,
 	logFactory,
 };
