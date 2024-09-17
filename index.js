@@ -34,8 +34,8 @@ function getFilenamesFormatFunction(condition, projectRoot) {
 	};
 }
 
-const logFilenamesFormat = getFilenamesFormatFunction(config.logFilenamesFormat, process.env.projectRoot);
-const errorFilenamesFormat = getFilenamesFormatFunction(config.errorFilenamesFormat, process.env.projectRoot);
+const logFilenamesFormat = getFilenamesFormatFunction(config.logFilenamesFormat, global.projectRoot);
+const errorFilenamesFormat = getFilenamesFormatFunction(config.errorFilenamesFormat, global.projectRoot);
 
 const numberRegex = new RegExp('(\\d+)', '');
 const functionNameRegex = new RegExp('^at ([^ ]+) +', '');

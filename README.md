@@ -8,7 +8,7 @@ In all following options, the last is the fallback case
 
 3 possible values for `logFilenamesFormat` and `errorFilenamesFormat`:
 - `filename`
-- `relative` (relative to the `projectRoot` in `process.env` (`projectRoot` excluded), `absolute` if none)
+- `relative` (relative to the `global.projectRoot`, `absolute` if none)
 - `absolute`
 
 ### In `process.env`:
