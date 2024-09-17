@@ -1,0 +1,19 @@
+{
+  "name": "extend-console",
+  "version": "1.0.0",
+  "description": "Extend the javascript console with INFO, WARN and ERROR reports and exports some console related utils",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/lakazatong/extend-console.git"
+  },
+  "author": "lakazatong",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/lakazatong/extend-console/issues"
+  },
+  "homepage": "https://github.com/lakazatong/extend-console#readme"
+}
