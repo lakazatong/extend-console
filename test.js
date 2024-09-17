@@ -1,4 +1,4 @@
-process.env.projectRoot = __dirname;
+global.projectRoot = __dirname;
 
 require('./index.js');
 

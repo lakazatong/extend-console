@@ -41,17 +41,6 @@ const numberRegex = new RegExp('(\\d+)', '');
 const functionNameRegex = new RegExp('^at ([^ ]+) +', '');
 const parseErrStackRegex = new RegExp('at (?:(.+?) )?\\(?([^)]+?.js):(\\d+)(?::(\\d+))?\\)?', '');
 
-function getFormattedTime() {
-	const date = Date.now();
-	const options = { timeZone: timezone, hour: '2-digit', minute: '2-digit', second: '2-digit' };
-	return new Intl.DateTimeFormat(locale, options).format(date);
-}
-
-function logFormat(logContext) {
-	const { type, typeColor, filename, functionName, lineNumber } = logContext;
-	return `${typeColor}${getFormattedTime()} [${type}]${colors.Reset} ${filename} - Line ${lineNumber} (${colors['FgGreen']}${functionName}${colors['Reset']}):`;
-}
-
 function getCallContext(err) {
 	// here we can just get the 3rd element of the stack as the call stack is predictable
 	const context = err.stack.split('\n')[2].trim().split(':').reverse();
@@ -84,7 +73,35 @@ function formatErr(err) {
 	return !parsedErr || parsedErr.every(e => !e) ? errorNameAndMessage : `${errorNameAndMessage} (${parsedErr.filter(e => e).join(':')})`;
 }
 
+function getFormattedTime() {
+	const date = Date.now();
+	const options = { timeZone: timezone, hour: '2-digit', minute: '2-digit', second: '2-digit' };
+	return new Intl.DateTimeFormat(locale, options).format(date);
+}
+
+const defaultLogFormat = (logContext) => {
+	const { type, typeColor, filename, functionName, lineNumber } = logContext;
+	return `${typeColor}${getFormattedTime()} [${type}]${colors.Reset} ${filename} - Line ${lineNumber} (${colors['FgGreen']}${functionName}${colors['Reset']}):`;
+};
 const defaultFormatArgsFunction = (logContext, ...args) => args.join(' ');
+const getDefaultFormatArgsFunctionForError = function (formatErrorFunction) {
+	return function (logContext, ...args) {
+		if (!args.length) return '';
+		const err = args.pop();
+		return `${args.join(' ')}${args.length > 0 ? ' ' : ''}${err instanceof Error ? formatErrorFunction(err) : err}`;
+	};
+}
+const getDefaultFormatArgsFunction = (type) => {
+	switch (type) {
+		case 'INFO':
+		case 'WARN':
+			return defaultFormatArgsFunction;
+		case 'ERROR':
+			return (process.env.format_errors ? process.env.format_errors.toLowerCase() === "true" : true)
+				? getDefaultFormatArgsFunctionForError(formatErr)
+				: getDefaultFormatArgsFunctionForError((err) => err.stack);
+	}
+}
 const getDefaultShouldLogFunction = (type) => {
 	switch (type) {
 		case 'INFO':
@@ -97,31 +114,24 @@ const getDefaultShouldLogFunction = (type) => {
 			return () => true;
 	}
 };
-const getDefaultFormatArgsForError = (formatErrFunction) => {
-	return function (logContext, ...args) {
-		if (!args.length) return '';
-		const err = args.pop();
-		return `${args.join(' ')}${args.length > 0 ? ' ' : ''}${err instanceof Error ? formatErrFunction(err) : err}`;
-	}
-}
 
-function logFactory(logger, type, typeColor, defaultFormatArgs = defaultFormatArgsFunction) {
-	return function(formatArgs = defaultFormatArgs, shouldLog = getDefaultShouldLogFunction(type)) {
+function logFactory(logger, type, typeColor) {
+	return function(
+		logFormat = defaultLogFormat,
+		formatArgs = getDefaultFormatArgsFunction(type),
+		shouldLog = getDefaultShouldLogFunction(type)
+	) {
 		return function (...args) {
 			const logContext = { logger, type, typeColor, ...getCallContext(new Error()) };
 			if (!shouldLog(logContext, ...args)) return;
-			logger(logFormat(logContext), formatArgs(logContext, ...args));
+			logger(logFormat(logContext, ...args), formatArgs(logContext, ...args));
 		}
 	}
 }
 
 console.createReport = logFactory(console.log, 'INFO', colors.FgCyan);
 console.createReportWarn = logFactory(console.warn, 'WARN', colors.FgYellow);
-console.createReportError = logFactory(console.error, 'ERROR', colors.FgRed, getDefaultFormatArgsForError(
-	(process.env.format_errors ? process.env.format_errors.toLowerCase() === "true" : true)
-		? formatErr
-		: (err) => err.stack
-));
+console.createReportError = logFactory(console.error, 'ERROR', colors.FgRed);
 
 console.report = console.createReport();
 console.reportWarn = console.createReportWarn();
@@ -151,13 +161,14 @@ module.exports = {
 	numberRegex,
 	functionNameRegex,
 	parseErrStackRegex,
-	getFormattedTime,
-	logFormat,
 	getCallContext,
 	parseErr,
 	formatErr,
+	getFormattedTime,
+	defaultLogFormat,
 	defaultFormatArgsFunction,
+	getDefaultFormatArgsFunctionForError,
+	getDefaultFormatArgsFunction,
 	getDefaultShouldLogFunction,
-	getDefaultFormatArgsForError,
 	logFactory,
 };
