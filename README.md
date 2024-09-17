@@ -30,4 +30,4 @@ If you absolutely want to report errors where the err is not at the end or you w
 
 See `test.js` and its [associated output](extend-console_example_output.jpg)
 
-A more advanced usage can be found [here](https://github.com/Pupariaa/Cordium/blob/main/internals/Events.js) where it provides custom `formatArgs` and `shouldLog` functions to `report`
+A more advanced usage can be found [here](https://github.com/Pupariaa/Cordium/blob/main/internals/Events.js) where it provides custom `formatArgs` and `shouldLog` functions to `console.createReport`
