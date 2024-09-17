@@ -2,11 +2,12 @@
 const fs = require("fs");
 const path = require("path");
 
-if (!fs.existsSync('config.json')) {
-    console.error('extend-console: requires a config/config.json at the root of execution, see https://github.com/lakazatong/extend-console/blob/master/config.json');
+const configPath = './config/config.json'
+if (!fs.existsSync(configPath)) {
+    console.error('extend-console: requires a config/config.json at the root of execution, see https://github.com/lakazatong/extend-console/blob/master/config/config.json');
     process.exit(1);
 }
-const config = JSON.parse(fs.readFileSync('config/config.json', 'utf8'))["extend-console"];
+const config = JSON.parse(fs.readFileSync(configPath, 'utf8'))["extend-console"];
 if (!config) {
     console.error('extend-console: the config.json must contain an "extend-console" entry containing its config');
     process.exit(1);
