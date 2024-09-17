@@ -17,7 +17,8 @@ In all following options, the last is the fallback case
 - false (logs err.stack instead)
 - true (tries to parse filename, functionName, lineNumber and rowNumber where the error happened)
 
-3 possible values for `logLevel`:
+4 possible values for `logLevel`:
+- 0 (None)
 - 1 (Errors)
 - 2 (Errors + Warnings)
 - 3 (Errors + Warnings + Infos)

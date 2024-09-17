@@ -30,6 +30,7 @@
         "logFilenamesFormat": "filename", 
         "errorFilenamesFormat": "relative",
         "timezone": "Europe/Paris",
-        "locale": "fr-FR"
+        "locale": "fr-FR",
+        "logLevel": 3
     }
 }
