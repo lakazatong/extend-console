@@ -1,6 +1,6 @@
 {
   "name": "extend-console",
-  "version": "4.2.0",
+  "version": "4.3.0",
   "description": "Extend the javascript console with INFO, WARN and ERROR reports and exports some console related utils",
   "main": "index.js",
   "scripts": {
