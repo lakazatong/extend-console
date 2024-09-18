@@ -35,6 +35,8 @@ See `test.js` and its [associated output](extend-console_example_output.jpg)
 
 A more advanced usage can be found [here](https://github.com/Pupariaa/Cordium/blob/main/internals/Events.js) where it provides custom `logFormat`, `formatArgs` and `shouldLog` functions to `console.createReport`, `console.createReportWarn` and `console.createReportError`
 
+It is also possible to expand on the create functions to provide some project specific default behavior to all reports, as seen [here](https://github.com/Pupariaa/Cordium/blob/main/index.js) where the extension is removed from the filePath if it contains 'internals' or if it is the path of the current file (index.js in this case)
+
 ## Advice
 
 Require this module once after all others with your `global.projectRoot` set beforehand to make sure it always correctly loads the filenames format functions relative to your `global.projectRoot`
