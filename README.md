@@ -2,7 +2,7 @@
 
 ## Config
 
-Requires a `config/config.json` at the root of execution, see the one provided
+If none is provided under a `config/config.json` at the root of execution, the default one is used
 
 In all following options, the last is the fallback case
 
@@ -37,4 +37,8 @@ A more advanced usage can be found [here](https://github.com/Pupariaa/Cordium/bl
 
 ## Advice
 
-require this module after all others with your `global.projectRoot` so that it correctly loads
+Require this module once after all others with your `global.projectRoot` set beforehand to make sure it always correctly loads the filenames format functions relative to your `global.projectRoot`
+
+You are in trouble if you require packages around in your project that might use this package, defining their own `global.projectRoot`, although it's unlikely for a module meant to be used as a node_module to define a `global.projectRoot`
+
+That said, you can always use `filename` or `absolute` and make sure none of this happens

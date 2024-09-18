@@ -1,24 +1,15 @@
 'use strict';
-const fs = require('fs');
 const path = require('path');
 
-const { name: packageName, author } = require(path.join(__dirname, 'package.json'));
-const configPath = 'config/config.json';
-const exampleConfigUrl = `https://github.com/${author}/${packageName}/blob/master/` + configPath;
+const { name: packageName } = require(path.join(__dirname, 'package.json'));
+const configPath = './config/config.json';
 
-if (!fs.existsSync(configPath)) {
-	console.error(`${packageName}: requires a ${configPath} at the root of execution, see ${exampleConfigUrl}`);
-	process.exit(1);
-}
-const config = require(path.join(__dirname, configPath))[packageName];
+let config = require(configPath)[packageName];
 if (!config) {
-	console.error(`${packageName}: the ${configPath} must contain an "${packageName}" entry containing its config, see ${exampleConfigUrl}`);
-	process.exit(1);
+	// load default config
+	config = require(path.join(__dirname, configPath))[packageName];
 }
-const colors = config.colors || (() => {
-	console.error(`${packageName}: requires a colors map in ${configPath} with at least Reset, FgCyan, FgYellow and FgRed, see ${exampleConfigUrl}`);
-	process.exit(1);
-})();
+const colors = config.colors;
 const anonymousObjectName = 'Object.<anonymous>';
 function getFilenamesFormatFunction(format, projectRoot) {
 	switch (format) {
