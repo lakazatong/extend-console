@@ -32,32 +32,47 @@ const locale = config.locale || 'fr-FR';
 const logLevel = config.logLevel || config.logLevel === 0 ? config.logLevel : 3;
 
 const numberRegex = new RegExp('(\\d+)', '');
-const functionNameRegex = new RegExp('^at ([^ ]+) +', '');
+const functionNameRegex = new RegExp('^at ([^(]+?) +\\(([^:])$', '');
 const parseErrStackRegex = new RegExp('at (?:(.+?) )?\\(?([^)]+?.js):(\\d+)(?::(\\d+))?\\)?', '');
+
+function parseErrStackLine(line) {
+	try {
+		const context = line.trim().split(':').reverse();
+		const rowNumber = numberRegex.exec(context[0])[1];
+		const lineNumber = context[1];
+		let filePath = context[2];
+		let functionName;
+		if (filePath.includes('(')) {
+			// probably Linux
+			const match = functionNameRegex.exec(filePath);
+			functionName = match[1];
+			filePath = match[2];
+		} else {
+			// probably Windows
+			// because windows paths start with "${driveLetter}:"
+			const match = functionNameRegex.exec(context[3]);
+			functionName = match[1];
+			const startOfFilePath = match[2];
+			filePath = `${startOfFilePath}:${filePath}`;
+		}
+		return { filePath, functionName, lineNumber, rowNumber };
+	} catch (err) {
+		return null;
+	}
+}
 
 function getCallContext(err) {
 	// here we can just get the 3rd element of the stack as the call stack is predictable
-	const context = err.stack.split('\n')[2].trim().split(':').reverse();
-	const rowNumber = numberRegex.exec(context[0])[1];
-	const lineNumber = context[1];
-	const filePath = context[2];
-	const functionName = functionNameRegex.exec(context[3])[1];
-	return { filePath, functionName, lineNumber, rowNumber };
+	return parseErrStackLine(err.stack.split('\n')[2]);
 }
 
-function parseErr(err, considerMatch = ignoreNodeModulesErrors ? (match) => match && !match[2].includes('node_modules') : (match) => match) {
+function parseErr(err, considerLine = ignoreNodeModulesErrors ? (parsedLine) => parsedLine.filePath.endsWith('.js') && !parsedLine.filePath.includes('node_modules') : (parsedLine) => Object.values(parsedLine).every(e => e)) {
 	const lines = err.stack.split('\n');
 	for (const line of lines) {
 		// whereas here we take the first .js file in the stack that is not from the node_modules as the call stack is not predictable
 		// this kind of assumes no error can arise from a node_module lol, let's say it's less likely than your code breaking when in development
-		const match = parseErrStackRegex.exec(line.trim());
-		if (considerMatch(match)) {
-			const functionName = match[1] || errorFilenamesAnonymousObjectAlias;
-			const filePath = match[2];
-			const lineNumber = match[3];
-			const rowNumber = match[4] || undefined;
-			return { filePath, functionName, lineNumber, rowNumber };
-		}
+		const parsedLine = parseErrStackLine(line);
+		if (parsedLine && considerLine(parsedLine)) return parsedLine;
 	}
 	return null;
 }
@@ -119,13 +134,15 @@ const getDefaultShouldLogFunction = (type) => {
 };
 
 function logFactory(logger, type, typeColor) {
-	return function(
+	return function (
 		logFormat = defaultLogFormat,
 		formatArgs = getDefaultFormatArgsFunction(type),
 		shouldLog = getDefaultShouldLogFunction(type)
 	) {
 		return function (...args) {
-			const logContext = { logger, type, typeColor, ...getCallContext(new Error()) };
+			let logContext = { logger, type, typeColor };
+			const callContext = getCallContext(new Error());
+			if (callContext) logContext = { ...logContext, ...callContext };
 			if (!shouldLog(logContext, ...args)) return;
 			logger(logFormat(logContext, ...args), formatArgs(logContext, ...args));
 		}
@@ -171,6 +188,7 @@ module.exports = {
 		functionNameRegex: functionNameRegex,
 		parseErrStackRegex: parseErrStackRegex
 	},
+	parseErrStackLine,
 	getCallContext,
 	parseErr,
 	formatErr,
