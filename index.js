@@ -2,40 +2,42 @@
 const fs = require('fs');
 const path = require('path');
 
-const configPath = './config/config.json'
+const { name: packageName, author } = require(path.join(__dirname, 'package.json'));
+const configPath = 'config/config.json';
+const exampleConfigUrl = `https://github.com/${author}/${packageName}/blob/master/` + configPath;
+
 if (!fs.existsSync(configPath)) {
-	console.error('extend-console: requires a config/config.json at the root of execution, see https://github.com/lakazatong/extend-console/blob/master/config/config.json');
+	console.error(`${packageName}: requires a ${configPath} at the root of execution, see ${exampleConfigUrl}`);
 	process.exit(1);
 }
-const config = JSON.parse(fs.readFileSync(configPath, 'utf8'))["extend-console"];
+const config = require(path.join(__dirname, configPath))[packageName];
 if (!config) {
-	console.error('extend-console: the config.json must contain an "extend-console" entry containing its config, see https://github.com/lakazatong/extend-console/blob/master/config/config.json');
+	console.error(`${packageName}: the ${configPath} must contain an "${packageName}" entry containing its config, see ${exampleConfigUrl}`);
 	process.exit(1);
 }
 const colors = config.colors || (() => {
-	console.error('extend-console: requires a colors map in config/config.json with at least Reset, FgCyan, FgYellow and FgRed, see https://github.com/lakazatong/extend-console/blob/master/config/config.json');
+	console.error(`${packageName}: requires a colors map in ${configPath} with at least Reset, FgCyan, FgYellow and FgRed, see ${exampleConfigUrl}`);
 	process.exit(1);
 })();
+const anonymousObjectName = 'Object.<anonymous>';
+function getFilenamesFormatFunction(format, projectRoot) {
+	switch (format) {
+		case 'filename':
+			return (filePath) => path.basename(filePath);
+		case 'relative':
+			return projectRoot ? (filePath) => path.relative(projectRoot, filePath) : (filePath) => filePath;
+		default:
+			return (filePath) => filePath;
+	}
+}
+const logFilenamesFormat = getFilenamesFormatFunction(config.logFilenamesFormat, global.projectRoot);
+const logFilenamesAnonymousObjectAlias = config.logFilenamesAnonymousObjectAlias || anonymousObjectName;
+const errorFilenamesFormat = getFilenamesFormatFunction(config.errorFilenamesFormat, global.projectRoot);
+const errorFilenamesAnonymousObjectAlias = config.errorFilenamesAnonymousObjectAlias || anonymousObjectName;
+const ignoreNodeModulesErrors = config.ignoreNodeModulesErrors || true;
 const timezone = config.timezone || 'Europe/Paris';
 const locale = config.locale || 'fr-FR';
 const logLevel = config.logLevel || config.logLevel === 0 ? config.logLevel : 3;
-
-function getFilenamesFormatFunction(condition, projectRoot) {
-	return function (filePath) {
-		const filename = path.basename(filePath);
-		switch (condition) {
-			case 'filename':
-				return filename;
-			case 'relative':
-				return projectRoot ? path.relative(projectRoot, filePath) : filePath;
-			default:
-				return filePath;
-		}
-	};
-}
-
-const logFilenamesFormat = getFilenamesFormatFunction(config.logFilenamesFormat, global.projectRoot);
-const errorFilenamesFormat = getFilenamesFormatFunction(config.errorFilenamesFormat, global.projectRoot);
 
 const numberRegex = new RegExp('(\\d+)', '');
 const functionNameRegex = new RegExp('^at ([^ ]+) +', '');
@@ -48,16 +50,17 @@ function getCallContext(err) {
 	const lineNumber = context[1];
 	const filename = logFilenamesFormat(context[2]);
 	const functionName = functionNameRegex.exec(context[3])[1];
-	return { filename, functionName: functionName === 'Object.<anonymous>' ? 'module' : functionName, lineNumber, rowNumber };
+	return { filename, functionName: functionName === anonymousObjectName ? logFilenamesAnonymousObjectAlias : functionName, lineNumber, rowNumber };
 }
 
-function parseErr(err) {
+function parseErr(err, considerMatch = ignoreNodeModulesErrors ? (match) => match && !match[2].includes('node_modules') : (match) => match) {
 	const lines = err.stack.split('\n');
 	for (const line of lines) {
 		// whereas here we take the first .js file in the stack that is not from the node_modules as the call stack is not predictable
+		// this kind of assumes no error can arise from a node_module lol, let's say it's less likely than your code breaking when in development
 		const match = parseErrStackRegex.exec(line.trim());
-		if (match && !match[2].includes('node_modules')) {
-			const functionName = match[1] || '<anonymous>';
+		if (considerMatch(match)) {
+			const functionName = match[1] || errorFilenamesAnonymousObjectAlias;
 			const filename = errorFilenamesFormat(match[2]);
 			const lineNumber = match[3];
 			const rowNumber = match[4] || undefined;
@@ -103,6 +106,8 @@ const getDefaultFormatArgsFunction = (type) => {
 			return defaultFormatArgsForWarn;
 		case 'ERROR':
 			return defaultFormatArgsForError;
+		default:
+			return defaultFormatArgsForInfo;
 	}
 };
 const defaultShouldLog = (logContext, ...args) => true;
@@ -158,13 +163,20 @@ console.fitOnTerm = function (text, mustEndWith = '') {
 };
 
 module.exports = {
-	config,
-	getFilenamesFormatFunction,
-	logFilenamesFormat,
-	errorFilenamesFormat,
-	numberRegex,
-	functionNameRegex,
-	parseErrStackRegex,
+	config: {
+		colors: colors,
+		logFilenamesFormat: logFilenamesFormat,
+		logFilenamesAnonymousObjectAlias: logFilenamesAnonymousObjectAlias,
+		errorFilenamesFormat: errorFilenamesFormat,
+		errorFilenamesAnonymousObjectAlias: errorFilenamesAnonymousObjectAlias,
+		ignoreNodeModulesErrors: ignoreNodeModulesErrors,
+		timezone: timezone,
+		locale: locale,
+		logLevel: logLevel,
+		numberRegex: numberRegex,
+		functionNameRegex: functionNameRegex,
+		parseErrStackRegex: parseErrStackRegex
+	},
 	getCallContext,
 	parseErr,
 	formatErr,
@@ -174,6 +186,7 @@ module.exports = {
 	defaultFormatArgsForWarn,
 	getDefaultFormatArgsFunctionForError,
 	defaultFormatArgsForError,
+	getDefaultFormatArgsFunction,
 	defaultShouldLog,
 	getDefaultShouldLogFunction,
 	logFactory,
