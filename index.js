@@ -1,13 +1,14 @@
 'use strict';
+const fs = require('fs');
 const path = require('path');
 
-const { name: packageName } = require(path.join(__dirname, 'package.json'));
+const { name: packageName } = require('./package.json');
 const configPath = './config/config.json';
 
-let config = require(configPath)[packageName];
+let config = JSON.parse(fs.readFileSync(configPath, 'utf8'))[packageName];
 if (!config) {
 	// load default config
-	config = require(path.join(__dirname, configPath))[packageName];
+	config = require(configPath)[packageName];
 }
 const colors = config.colors;
 const anonymousObjectName = 'Object.<anonymous>';
