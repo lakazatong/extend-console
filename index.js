@@ -132,15 +132,15 @@ function logFactory(logger, type, typeColor) {
 	}
 }
 
-console.createReport = logFactory(console.log, 'INFO', colors.FgCyan);
-console.createReportWarn = logFactory(console.warn, 'WARN', colors.FgYellow);
-console.createReportError = logFactory(console.error, 'ERROR', colors.FgRed);
+console.createReport ??= logFactory(console.log, 'INFO', colors.FgCyan);
+console.createReportWarn ??= logFactory(console.warn, 'WARN', colors.FgYellow);
+console.createReportError ??= logFactory(console.error, 'ERROR', colors.FgRed);
 
-console.report = console.createReport();
-console.reportWarn = console.createReportWarn();
-console.reportError = console.createReportError();
+console.report ??= console.createReport();
+console.reportWarn ??= console.createReportWarn();
+console.reportError ??= console.createReportError();
 
-console.fitOnTerm = function (text, mustEndWith = '') {
+console.fitOnTerm ??= function (text, mustEndWith = '') {
 	const processedLines = text.split('\n').map(line => {
 		let result = '';
 		let curTrueLength = 0;
