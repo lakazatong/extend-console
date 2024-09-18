@@ -9,11 +9,11 @@ if (!fs.existsSync(configPath)) {
 }
 const config = JSON.parse(fs.readFileSync(configPath, 'utf8'))["extend-console"];
 if (!config) {
-	console.error('extend-console: the config.json must contain an "extend-console" entry containing its config');
+	console.error('extend-console: the config.json must contain an "extend-console" entry containing its config, see https://github.com/lakazatong/extend-console/blob/master/config/config.json');
 	process.exit(1);
 }
 const colors = config.colors || (() => {
-	console.error('extend-console: requires a colors map in config/config.json with at least Reset, FgCyan, FgYellow and FgRed');
+	console.error('extend-console: requires a colors map in config/config.json with at least Reset, FgCyan, FgYellow and FgRed, see https://github.com/lakazatong/extend-console/blob/master/config/config.json');
 	process.exit(1);
 })();
 const timezone = config.timezone || 'Europe/Paris';
@@ -83,7 +83,8 @@ const defaultLogFormat = (logContext, ...args) => {
 	const { type, typeColor, filename, functionName, lineNumber } = logContext;
 	return `${typeColor}${getFormattedTime()} [${type}]${colors.Reset} ${filename} - Line ${lineNumber} (${colors['FgGreen']}${functionName}${colors['Reset']}):`;
 };
-const defaultFormatArgs = (logContext, ...args) => args.join(' ');
+const defaultFormatArgsForInfo = (logContext, ...args) => args.join(' ');
+const defaultFormatArgsForWarn = (logContext, ...args) => args.join(' ');
 const getDefaultFormatArgsFunctionForError = function (formatErrorFunction) {
 	return function (logContext, ...args) {
 		if (!args.length) return '';
@@ -91,15 +92,17 @@ const getDefaultFormatArgsFunctionForError = function (formatErrorFunction) {
 		return `${args.join(' ')}${args.length > 0 ? ' ' : ''}${err instanceof Error ? formatErrorFunction(err) : err}`;
 	};
 };
+const defaultFormatArgsForError = (process.env.format_errors ? process.env.format_errors.toLowerCase() === "true" : true)
+	? getDefaultFormatArgsFunctionForError(formatErr)
+	: getDefaultFormatArgsFunctionForError((err) => err.stack);
 const getDefaultFormatArgsFunction = (type) => {
 	switch (type) {
 		case 'INFO':
+			return defaultFormatArgsForInfo
 		case 'WARN':
-			return defaultFormatArgs;
+			return defaultFormatArgsForWarn;
 		case 'ERROR':
-			return (process.env.format_errors ? process.env.format_errors.toLowerCase() === "true" : true)
-				? getDefaultFormatArgsFunctionForError(formatErr)
-				: getDefaultFormatArgsFunctionForError((err) => err.stack);
+			return defaultFormatArgsForError;
 	}
 };
 const defaultShouldLog = (logContext, ...args) => true;
@@ -167,9 +170,10 @@ module.exports = {
 	formatErr,
 	getFormattedTime,
 	defaultLogFormat,
-	defaultFormatArgs,
+	defaultFormatArgsForInfo,
+	defaultFormatArgsForWarn,
 	getDefaultFormatArgsFunctionForError,
-	getDefaultFormatArgsFunction,
+	defaultFormatArgsForError,
 	defaultShouldLog,
 	getDefaultShouldLogFunction,
 	logFactory,
