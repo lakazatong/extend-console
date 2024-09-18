@@ -40,9 +40,9 @@ function getCallContext(err) {
 	const context = err.stack.split('\n')[2].trim().split(':').reverse();
 	const rowNumber = numberRegex.exec(context[0])[1];
 	const lineNumber = context[1];
-	const filename = logFilenamesFormat(context[2]);
+	const filename = context[2];
 	const functionName = functionNameRegex.exec(context[3])[1];
-	return { filename, functionName: functionName === anonymousObjectName ? logFilenamesAnonymousObjectAlias : functionName, lineNumber, rowNumber };
+	return { filename, functionName, lineNumber, rowNumber };
 }
 
 function parseErr(err, considerMatch = ignoreNodeModulesErrors ? (match) => match && !match[2].includes('node_modules') : (match) => match) {
@@ -53,10 +53,10 @@ function parseErr(err, considerMatch = ignoreNodeModulesErrors ? (match) => matc
 		const match = parseErrStackRegex.exec(line.trim());
 		if (considerMatch(match)) {
 			const functionName = match[1] || errorFilenamesAnonymousObjectAlias;
-			const filename = errorFilenamesFormat(match[2]);
+			const filename = match[2];
 			const lineNumber = match[3];
 			const rowNumber = match[4] || undefined;
-			return [filename, functionName, lineNumber, rowNumber];
+			return { filename, functionName, lineNumber, rowNumber };
 		}
 	}
 	return null;
@@ -65,7 +65,9 @@ function parseErr(err, considerMatch = ignoreNodeModulesErrors ? (match) => matc
 function formatErr(err) {
 	let errorNameAndMessage = `(${err.name}) ${err.message.includes('Require stack') ? err.message.split('\n')[0] : err.message}`;
 	const parsedErr = parseErr(err);
-	return !parsedErr || parsedErr.every(e => !e) ? errorNameAndMessage : `${errorNameAndMessage} (${parsedErr.filter(e => e).join(':')})`;
+	if (!parsedErr || Object.values(parsedErr).every(e => !e)) return errorNameAndMessage;
+	parsedErr.filename = errorFilenamesFormat(parsedErr.filename);
+	return `${errorNameAndMessage} (${Object.values(parsedErr).filter(e => e).join(':')})`;
 }
 
 function getFormattedTime() {
@@ -76,7 +78,7 @@ function getFormattedTime() {
 
 const defaultLogFormat = (logContext, ...args) => {
 	const { type, typeColor, filename, functionName, lineNumber } = logContext;
-	return `${typeColor}${getFormattedTime()} [${type}]${colors.Reset} ${filename} - Line ${lineNumber} (${colors['FgGreen']}${functionName}${colors['Reset']}):`;
+	return `${typeColor}${getFormattedTime()} [${type}]${colors.Reset} ${logFilenamesFormat(filename)} - Line ${lineNumber} (${colors['FgGreen']}${functionName === anonymousObjectName ? logFilenamesAnonymousObjectAlias : functionName}${colors['Reset']}):`;
 };
 const defaultFormatArgsForInfo = (logContext, ...args) => args.join(' ');
 const defaultFormatArgsForWarn = (logContext, ...args) => args.join(' ');
