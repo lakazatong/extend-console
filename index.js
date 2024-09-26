@@ -15,9 +15,17 @@ const anonymousObjectName = 'Object.<anonymous>';
 function getFilenamesFormatFunction(format, projectRoot) {
 	switch (format) {
 		case 'filename':
-			return (filePath) => path.basename(filePath);
+			return (filePath) => filePath
+				? path.basename(filePath)
+				: filePath;
 		case 'relative':
-			return projectRoot ? (filePath) => path.relative(projectRoot, filePath) : (filePath) => filePath;
+			return projectRoot
+				? (
+					(filePath) => filePath
+						? path.relative(projectRoot, filePath)
+						: filePath
+				)
+				: (filePath) => filePath;
 		default:
 			return (filePath) => filePath;
 	}
@@ -32,28 +40,29 @@ const locale = config.locale || 'fr-FR';
 const logLevel = config.logLevel || config.logLevel === 0 ? config.logLevel : 3;
 
 const numberRegex = new RegExp('(\\d+)', '');
-const functionNameRegex = new RegExp('^at ([^(]+?) +\\(([^:])$', '');
-const parseErrStackRegex = new RegExp('at (?:(.+?) )?\\(?([^)]+?.js):(\\d+)(?::(\\d+))?\\)?', '');
+const linuxFunctionNameRegex = new RegExp('^at(?: (.+))? ()$', '');
+const windowsFunctionNameRegex = new RegExp('^at(?: (.+))? \\(?.{1}$', '');
 
 function parseErrStackLine(line) {
+	//at C:\Users\Bo_wo\Desktop\code\Cordium\src\commands\clean.js:32:25
+	//at CommandHandler.deployCommands (C:\Users\Bo_wo\Desktop\code\Cordium\internals\CommandManager.js:58:21)
 	try {
 		const context = line.trim().split(':').reverse();
 		const rowNumber = numberRegex.exec(context[0])[1];
 		const lineNumber = context[1];
-		let filePath = context[2];
-		let functionName;
-		if (filePath.includes('(')) {
+		let tmp = context[2];
+		let filePath, functionName;
+		if (tmp.includes(' ')) {
 			// probably Linux
-			const match = functionNameRegex.exec(filePath);
+			const match = linuxFunctionNameRegex.exec(tmp);
 			functionName = match[1];
 			filePath = match[2];
 		} else {
 			// probably Windows
-			// because windows paths start with "${driveLetter}:"
-			const match = functionNameRegex.exec(context[3]);
-			functionName = match[1];
-			const startOfFilePath = match[2];
-			filePath = `${startOfFilePath}:${filePath}`;
+			// because windows paths start with `${driveLetter}:`
+			const match = windowsFunctionNameRegex.exec(context[3]);
+			functionName = match[1] || anonymousObjectName;
+			filePath = `${context[3][context[3].length - 1]}:${tmp}`;
 		}
 		return { filePath, functionName, lineNumber, rowNumber };
 	} catch (err) {
@@ -62,8 +71,12 @@ function parseErrStackLine(line) {
 }
 
 function getCallContext(err) {
-	// here we can just get the 3rd element of the stack as the call stack is predictable
-	return parseErrStackLine(err.stack.split('\n')[2]);
+	// here we can just get the first line starting at the 3rd that has information on the functionName
+	const lines = err.stack.split('\n');
+	for (const line of lines.slice(2)) {
+		const parsedLine = parseErrStackLine(line);
+		if (parsedLine && parsedLine.functionName && parsedLine.functionName !== anonymousObjectName) return parsedLine;
+	}
 }
 
 function parseErr(err, considerLine = ignoreNodeModulesErrors ? (parsedLine) => parsedLine.filePath.endsWith('.js') && !parsedLine.filePath.includes('node_modules') : (parsedLine) => Object.values(parsedLine).every(e => e)) {
@@ -71,6 +84,7 @@ function parseErr(err, considerLine = ignoreNodeModulesErrors ? (parsedLine) => 
 	for (const line of lines) {
 		// whereas here we take the first .js file in the stack that is not from the node_modules as the call stack is not predictable
 		// this kind of assumes no error can arise from a node_module lol, let's say it's less likely than your code breaking when in development
+		// at least that's the behavior when ignoreNodeModulesErrors is true
 		const parsedLine = parseErrStackLine(line);
 		if (parsedLine && considerLine(parsedLine)) return parsedLine;
 	}
@@ -184,9 +198,6 @@ module.exports = {
 		timezone: timezone,
 		locale: locale,
 		logLevel: logLevel,
-		numberRegex: numberRegex,
-		functionNameRegex: functionNameRegex,
-		parseErrStackRegex: parseErrStackRegex
 	},
 	parseErrStackLine,
 	getCallContext,
