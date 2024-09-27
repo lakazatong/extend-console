@@ -28,9 +28,9 @@
             "BgWhite": "\u001b[47m"
         },
         "logFilenamesFormat": "filename",
-        "logFilenamesAnonymousObjectAlias": "module",
+        "logFunctionNameAnonymousObjectAlias": "module",
         "errorFilenamesFormat": "relative",
-        "errorFilenamesAnonymousObjectAlias": "",
+        "errorFunctionNameAnonymousObjectAlias": "",
         "ignoreNodeModulesErrors": true,
         "timezone": "Europe/Paris",
         "locale": "fr-FR",

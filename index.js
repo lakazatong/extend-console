@@ -5,12 +5,6 @@ const path = require('path');
 const { name: packageName } = require('./package.json');
 const configPath = './config/config.json';
 
-let config = JSON.parse(fs.readFileSync(configPath, 'utf8'))[packageName];
-if (!config) {
-	// load default config
-	config = require(configPath)[packageName];
-}
-const colors = config.colors;
 const anonymousObjectName = 'Object.<anonymous>';
 function getFilenamesFormatFunction(format, projectRoot) {
 	switch (format) {
@@ -30,14 +24,24 @@ function getFilenamesFormatFunction(format, projectRoot) {
 			return (filePath) => filePath;
 	}
 }
-const logFilenamesFormat = getFilenamesFormatFunction(config.logFilenamesFormat, global.projectRoot);
-const logFilenamesAnonymousObjectAlias = config.logFilenamesAnonymousObjectAlias || anonymousObjectName;
-const errorFilenamesFormat = getFilenamesFormatFunction(config.errorFilenamesFormat, global.projectRoot);
-const errorFilenamesAnonymousObjectAlias = config.errorFilenamesAnonymousObjectAlias || anonymousObjectName;
-const ignoreNodeModulesErrors = config.ignoreNodeModulesErrors || true;
-const timezone = config.timezone || 'Europe/Paris';
-const locale = config.locale || 'fr-FR';
-const logLevel = config.logLevel || config.logLevel === 0 ? config.logLevel : 3;
+
+const config = JSON.parse(fs.readFileSync(configPath, 'utf8'))[packageName];
+const defaultConfig = require(configPath)[packageName];
+
+const colors = config?.colors || defaultConfig.colors;
+const logFilenamesFormat = getFilenamesFormatFunction(config?.logFilenamesFormat || defaultConfig.logFilenamesFormat, global.projectRoot);
+const logFunctionNameAnonymousObjectAlias = config?.logFunctionNameAnonymousObjectAlias || defaultConfig.logFunctionNameAnonymousObjectAlias;
+const errorFilenamesFormat = getFilenamesFormatFunction(config?.errorFilenamesFormat || defaultConfig.errorFilenamesFormat, global.projectRoot);
+const errorFunctionNameAnonymousObjectAlias = config?.errorFunctionNameAnonymousObjectAlias || defaultConfig.errorFunctionNameAnonymousObjectAlias;
+const ignoreNodeModulesErrors = config?.ignoreNodeModulesErrors || defaultConfig.ignoreNodeModulesErrors;
+const timezone = config?.timezone || defaultConfig.timezone;
+const locale = config?.locale || defaultConfig.locale;
+let logLevel = 0;
+if (config?.logLevel) {
+	logLevel = config.logLevel;
+} else {
+	logLevel = defaultConfig.logLevel;
+}
 
 const numberRegex = new RegExp('(\\d+)', '');
 const linuxFunctionNameRegex = new RegExp('^at(?: (.+))? ()$', '');
@@ -95,6 +99,9 @@ function formatErr(err) {
 	let errorNameAndMessage = `(${err.name}) ${err.message.includes('Require stack') ? err.message.split('\n')[0] : err.message}`;
 	const parsedErr = parseErr(err);
 	if (!parsedErr || Object.values(parsedErr).every(e => !e)) return errorNameAndMessage;
+	if (parsedErr.functionName === anonymousObjectName) {
+		parsedErr.functionName = errorFunctionNameAnonymousObjectAlias;
+	}
 	parsedErr.filePath = errorFilenamesFormat(parsedErr.filePath);
 	return `${errorNameAndMessage} (${Object.values(parsedErr).filter(e => e).join(':')})`;
 }
@@ -107,7 +114,7 @@ function getFormattedTime() {
 
 const defaultLogFormat = (logContext, ...args) => {
 	const { type, typeColor, filePath, functionName, lineNumber } = logContext;
-	return `${typeColor}${getFormattedTime()} [${type}]${colors.Reset} ${logFilenamesFormat(filePath)} - Line ${lineNumber} (${colors['FgGreen']}${functionName === anonymousObjectName ? logFilenamesAnonymousObjectAlias : functionName}${colors['Reset']}):`;
+	return `${typeColor}${getFormattedTime()} [${type}]${colors.Reset} ${logFilenamesFormat(filePath)} - Line ${lineNumber} (${colors['FgGreen']}${functionName === anonymousObjectName ? logFunctionNameAnonymousObjectAlias : functionName}${colors['Reset']}):`;
 };
 const defaultFormatArgsForInfo = (logContext, ...args) => args.join(' ');
 const defaultFormatArgsForWarn = (logContext, ...args) => args.join(' ');
@@ -191,9 +198,9 @@ module.exports = {
 	config: {
 		colors: colors,
 		logFilenamesFormat: logFilenamesFormat,
-		logFilenamesAnonymousObjectAlias: logFilenamesAnonymousObjectAlias,
+		logFunctionNameAnonymousObjectAlias: logFunctionNameAnonymousObjectAlias,
 		errorFilenamesFormat: errorFilenamesFormat,
-		errorFilenamesAnonymousObjectAlias: errorFilenamesAnonymousObjectAlias,
+		errorFunctionNameAnonymousObjectAlias: errorFunctionNameAnonymousObjectAlias,
 		ignoreNodeModulesErrors: ignoreNodeModulesErrors,
 		timezone: timezone,
 		locale: locale,
