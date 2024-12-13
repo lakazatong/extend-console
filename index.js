@@ -29,16 +29,16 @@ function getFilenamesFormatFunction(format, projectRoot) {
 const config = JSON.parse(fs.readFileSync(configPath, 'utf8'))[packageName];
 const defaultConfig = require(configPath)[packageName];
 
-const formatErrors = config?.formatErrors || defaultConfig.formatErrors;
-const colors = config?.colors || defaultConfig.colors;
-const logFilenamesFormat = getFilenamesFormatFunction(config?.logFilenamesFormat || defaultConfig.logFilenamesFormat, global.projectRoot);
-const logFunctionNameAnonymousObjectAlias = config?.logFunctionNameAnonymousObjectAlias || defaultConfig.logFunctionNameAnonymousObjectAlias;
-const errorFilenamesFormat = getFilenamesFormatFunction(config?.errorFilenamesFormat || defaultConfig.errorFilenamesFormat, global.projectRoot);
-const errorFunctionNameAnonymousObjectAlias = config?.errorFunctionNameAnonymousObjectAlias || defaultConfig.errorFunctionNameAnonymousObjectAlias;
-const ignoreNodeModulesErrors = config?.ignoreNodeModulesErrors || defaultConfig.ignoreNodeModulesErrors;
-const timezone = config?.timezone || defaultConfig.timezone;
-const locale = config?.locale || defaultConfig.locale;
-const logLevel = config?.logLevel || defaultConfig.logLevel;
+let formatErrors = ('formatErrors' in config) ? config.formatErrors : defaultConfig.formatErrors;
+const colors = ('colors' in config) ? config.colors : defaultConfig.colors;
+const logFilenamesFormat = getFilenamesFormatFunction(('logFilenamesFormat' in config) ? config.logFilenamesFormat : defaultConfig.logFilenamesFormat, global.projectRoot);
+const logFunctionNameAnonymousObjectAlias = ('logFunctionNameAnonymousObjectAlias' in config) ? config.logFunctionNameAnonymousObjectAlias : defaultConfig.logFunctionNameAnonymousObjectAlias;
+const errorFilenamesFormat = getFilenamesFormatFunction(('errorFilenamesFormat' in config) ? config.errorFilenamesFormat : defaultConfig.errorFilenamesFormat, global.projectRoot);
+const errorFunctionNameAnonymousObjectAlias = ('errorFunctionNameAnonymousObjectAlias' in config) ? config.errorFunctionNameAnonymousObjectAlias : defaultConfig.errorFunctionNameAnonymousObjectAlias;
+const ignoreNodeModulesErrors = ('ignoreNodeModulesErrors' in config) ? config.ignoreNodeModulesErrors : defaultConfig.ignoreNodeModulesErrors;
+const timezone = ('timezone' in config) ? config.timezone : defaultConfig.timezone;
+const locale = ('locale' in config) ? config.locale : defaultConfig.locale;
+const logLevel = ('logLevel' in config) ? config.logLevel : defaultConfig.logLevel;
 
 const numberRegex = new RegExp('(\\d+)', '');
 const linuxFunctionNameRegex = new RegExp('^at(?: (.+))? ()$', '');
