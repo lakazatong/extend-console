@@ -45,8 +45,6 @@ const linuxFunctionNameRegex = new RegExp('^at(?: (.+))? ()$', '');
 const windowsFunctionNameRegex = new RegExp('^at(?: (.+))? \\(?.{1}$', '');
 
 function parseErrStackLine(line) {
-	//at C:\Users\Bo_wo\Desktop\code\Cordium\src\commands\clean.js:32:25
-	//at CommandHandler.deployCommands (C:\Users\Bo_wo\Desktop\code\Cordium\internals\CommandManager.js:58:21)
 	try {
 		const context = line.trim().split(':').reverse();
 		const rowNumber = numberRegex.exec(context[0])[1];
@@ -62,7 +60,11 @@ function parseErrStackLine(line) {
 			// probably Windows
 			// because windows paths start with `${driveLetter}:`
 			const match = windowsFunctionNameRegex.exec(context[3]);
-			functionName = match[1] || anonymousObjectName;
+			if (match[1]) {
+				functionName = match[1] === anonymousObjectName ? logFunctionNameAnonymousObjectAlias : functionName;
+			} else {
+				functionName = anonymousObjectName;
+			}
 			filePath = `${context[3][context[3].length - 1]}:${tmp}`;
 		}
 		return { filePath, functionName, lineNumber, rowNumber };
@@ -71,10 +73,10 @@ function parseErrStackLine(line) {
 	}
 }
 
-function getCallContext(err) {
+function getCallContext(err, startAt) {
 	// here we can just get the first line starting at the 3rd that has information on the functionName
 	const lines = err.stack.split('\n');
-	for (const line of lines.slice(2)) {
+	for (const line of lines.slice(startAt)) {
 		const parsedLine = parseErrStackLine(line);
 		if (parsedLine && parsedLine.functionName && parsedLine.functionName !== anonymousObjectName) return parsedLine;
 	}
@@ -111,7 +113,7 @@ function getFormattedTime() {
 
 const defaultLogFormat = (logContext, ...args) => {
 	const { type, typeColor, filePath, functionName, lineNumber } = logContext;
-	return `${typeColor}${getFormattedTime()} [${type}]${colors.Reset} ${logFilenamesFormat(filePath)} - Line ${lineNumber} (${colors['FgGreen']}${functionName === anonymousObjectName ? logFunctionNameAnonymousObjectAlias : functionName}${colors['Reset']}):`;
+	return `${typeColor}${getFormattedTime()} [${type}]${colors.Reset} ${logFilenamesFormat(filePath)} - Line ${lineNumber} (${colors['FgGreen']}${functionName}${colors['Reset']}):`;
 };
 const defaultFormatArgsForInfo = (logContext, ...args) => args.join(' ');
 const defaultFormatArgsForWarn = (logContext, ...args) => args.join(' ');
@@ -158,13 +160,29 @@ function logFactory(logger, type, typeColor) {
 		shouldLog = getDefaultShouldLogFunction(type)
 	) {
 		return function (...args) {
+			let callContextError;
+			let startAt;
+			if (args.length >= 1 && args[0] instanceof Error && (type !== 'ERROR' || args.length >= 2)) {
+				callContextError = args[0];
+				args.shift();
+				startAt = 1;
+			} else {
+				callContextError = new Error();
+				startAt = 2;
+			}
+
 			let logContext = { logger, type, typeColor };
-			const callContext = getCallContext(new Error());
-			if (callContext) logContext = { ...logContext, ...callContext };
+
+			const callContext = getCallContext(callContextError, startAt);
+			if (callContext) {
+				logContext = { ...logContext, ...callContext };
+			}
+
 			if (!shouldLog(logContext, ...args)) return;
 			logger(logFormat(logContext, ...args), formatArgs(logContext, ...args));
-		}
-	}
+			// return `${callContextError} | ${args}`;
+		};
+	};
 }
 
 console.createReport ??= logFactory(console.log, 'INFO', colors.FgCyan);
