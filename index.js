@@ -1,4 +1,5 @@
 'use strict';
+
 const fs = require('fs');
 const path = require('path');
 
@@ -28,6 +29,7 @@ function getFilenamesFormatFunction(format, projectRoot) {
 const config = JSON.parse(fs.readFileSync(configPath, 'utf8'))[packageName];
 const defaultConfig = require(configPath)[packageName];
 
+const formatErrors = config?.formatErrors || defaultConfig.formatErrors;
 const colors = config?.colors || defaultConfig.colors;
 const logFilenamesFormat = getFilenamesFormatFunction(config?.logFilenamesFormat || defaultConfig.logFilenamesFormat, global.projectRoot);
 const logFunctionNameAnonymousObjectAlias = config?.logFunctionNameAnonymousObjectAlias || defaultConfig.logFunctionNameAnonymousObjectAlias;
@@ -36,12 +38,7 @@ const errorFunctionNameAnonymousObjectAlias = config?.errorFunctionNameAnonymous
 const ignoreNodeModulesErrors = config?.ignoreNodeModulesErrors || defaultConfig.ignoreNodeModulesErrors;
 const timezone = config?.timezone || defaultConfig.timezone;
 const locale = config?.locale || defaultConfig.locale;
-let logLevel = 0;
-if (config?.logLevel) {
-	logLevel = config.logLevel;
-} else {
-	logLevel = defaultConfig.logLevel;
-}
+const logLevel = config?.logLevel || defaultConfig.logLevel;
 
 const numberRegex = new RegExp('(\\d+)', '');
 const linuxFunctionNameRegex = new RegExp('^at(?: (.+))? ()$', '');
@@ -125,7 +122,7 @@ const getDefaultFormatArgsFunctionForError = function (formatErrorFunction) {
 		return `${args.join(' ')}${args.length > 0 ? ' ' : ''}${err instanceof Error ? formatErrorFunction(err) : err}`;
 	};
 };
-const defaultFormatArgsForError = (process.env.format_errors ? process.env.format_errors.toLowerCase() === "true" : true)
+const defaultFormatArgsForError = formatErrors
 	? getDefaultFormatArgsFunctionForError(formatErr)
 	: getDefaultFormatArgsFunctionForError((err) => err.stack);
 const getDefaultFormatArgsFunction = (type) => {
@@ -196,6 +193,7 @@ console.fitOnTerm ??= function (text, mustEndWith = '') {
 
 module.exports = {
 	config: {
+		formatErrors: formatErrors,
 		colors: colors,
 		logFilenamesFormat: logFilenamesFormat,
 		logFunctionNameAnonymousObjectAlias: logFunctionNameAnonymousObjectAlias,

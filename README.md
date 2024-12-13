@@ -6,8 +6,6 @@ If none is provided under a `config/config.json` at the root of execution, the d
 
 In all following options, the last is the fallback case
 
-### In `config/config.json`: 
-
 3 possible values for `logFilenamesFormat` and `errorFilenamesFormat`:
 - `filename`
 - `relative` (relative to the `global.projectRoot`, `absolute` if none)
@@ -18,8 +16,6 @@ In all following options, the last is the fallback case
 - 1 (Errors)
 - 2 (Errors + Warnings)
 - 3 (Errors + Warnings + Infos)
-
-### In `process.env`:
 
 2 possible values for `format_errors`:
 - false (logs err.stack instead)
@@ -35,7 +31,7 @@ See `test.js` and its [associated output](extend-console_example_output.jpg)
 
 A more advanced usage can be found [here](https://github.com/Pupariaa/Cordium/blob/main/internals/Events.js) where it provides custom `logFormat`, `formatArgs` and `shouldLog` functions to `console.createReport`, `console.createReportWarn` and `console.createReportError`
 
-It is also possible to expand on the create functions to provide some project specific default behavior to all reports, as seen [here](https://github.com/Pupariaa/Cordium/blob/main/index.js) where the extension is removed from the filePath if it contains 'internals' or if it is the path of the current file (index.js in this case)
+It is also possible to expand on the create functions to provide some project specific default behavior to all reports, as seen [here](https://github.com/Pupariaa/Cordium/blob/main/internals/Utils.js) where the extension is removed from the filePath if it contains 'internals' or if it is the path of the current file (index.js in this case)
 
 ## Advice
 

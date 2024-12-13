@@ -3,7 +3,7 @@ global.projectRoot = __dirname;
 require('./index.js');
 
 function testo() {
-    console.report('hello');
+	console.report('hello');
 }
 
 testo();
@@ -11,11 +11,11 @@ testo();
 console.reportWarn('world');
 
 function generateError() {
-    throw new Error('test');
+	throw new Error('test');
 }
 
 try {
-    generateError();
+	generateError();
 } catch (err) {
-    console.reportError(err);
+	console.reportError(err);
 }
