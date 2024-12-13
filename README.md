@@ -25,6 +25,8 @@ If the last argument to `console.reportError` is an Error instance and `format_e
 
 If you absolutely want to report errors where the err is not at the end or you want to report multiple at once, you should provide a formatArgs to `console.createReportError`, for that you might want to check out the `formatErr` and `parseErr` functions provided
 
+The dates rely on env.locale and env.timezone (or defaults if absent)
+
 ## Example usage
 
 See `test.js` and its [associated output](extend-console_example_output.jpg)

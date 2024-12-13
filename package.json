@@ -15,5 +15,8 @@
   "bugs": {
     "url": "https://github.com/lakazatong/extend-console/issues"
   },
-  "homepage": "https://github.com/lakazatong/extend-console#readme"
+  "homepage": "https://github.com/lakazatong/extend-console#readme",
+  "dependencies": {
+    "dotenv": "^16.4.7"
+  }
 }

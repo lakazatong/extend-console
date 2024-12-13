@@ -33,8 +33,6 @@
 		"errorFilenamesFormat": "relative",
 		"errorFunctionNameAnonymousObjectAlias": "",
 		"ignoreNodeModulesErrors": true,
-		"timezone": "Europe/Paris",
-		"locale": "fr-FR",
 		"logLevel": 3
 	}
 }

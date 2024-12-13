@@ -2,9 +2,11 @@
 
 const fs = require('fs');
 const path = require('path');
+const dotenv = require('dotenv');
 
 const { name: packageName } = require('./package.json');
 const configPath = './config/config.json';
+const configEnvPath = './config/config.env';
 
 const anonymousObjectName = 'Object.<anonymous>';
 function getFilenamesFormatFunction(format, projectRoot) {
@@ -29,6 +31,21 @@ function getFilenamesFormatFunction(format, projectRoot) {
 const config = JSON.parse(fs.readFileSync(configPath, 'utf8'))[packageName];
 const defaultConfig = require(configPath)[packageName];
 
+let envConfig = {};
+let defaultEnvConfig = {};
+
+if (fs.existsSync(configEnvPath)) {
+	envConfig = dotenv.parse(fs.readFileSync(configEnvPath, 'utf8'));
+}
+
+const defaultEnvPath = path.resolve(__dirname, configEnvPath);
+if (fs.existsSync(defaultEnvPath)) {
+	defaultEnvConfig = dotenv.parse(fs.readFileSync(defaultEnvPath, 'utf8'));
+}
+
+const timezone = ('timezone' in envConfig) ? envConfig.timezone : defaultEnvConfig.timezone;
+const locale = ('locale' in envConfig) ? envConfig.locale : defaultEnvConfig.locale;
+
 let formatErrors = ('formatErrors' in config) ? config.formatErrors : defaultConfig.formatErrors;
 const colors = ('colors' in config) ? config.colors : defaultConfig.colors;
 const logFilenamesFormat = getFilenamesFormatFunction(('logFilenamesFormat' in config) ? config.logFilenamesFormat : defaultConfig.logFilenamesFormat, global.projectRoot);
@@ -36,8 +53,6 @@ const logFunctionNameAnonymousObjectAlias = ('logFunctionNameAnonymousObjectAlia
 const errorFilenamesFormat = getFilenamesFormatFunction(('errorFilenamesFormat' in config) ? config.errorFilenamesFormat : defaultConfig.errorFilenamesFormat, global.projectRoot);
 const errorFunctionNameAnonymousObjectAlias = ('errorFunctionNameAnonymousObjectAlias' in config) ? config.errorFunctionNameAnonymousObjectAlias : defaultConfig.errorFunctionNameAnonymousObjectAlias;
 const ignoreNodeModulesErrors = ('ignoreNodeModulesErrors' in config) ? config.ignoreNodeModulesErrors : defaultConfig.ignoreNodeModulesErrors;
-const timezone = ('timezone' in config) ? config.timezone : defaultConfig.timezone;
-const locale = ('locale' in config) ? config.locale : defaultConfig.locale;
 const logLevel = ('logLevel' in config) ? config.logLevel : defaultConfig.logLevel;
 
 const numberRegex = new RegExp('(\\d+)', '');
