@@ -61,7 +61,7 @@ function parseErrStackLine(line) {
 			// because windows paths start with `${driveLetter}:`
 			const match = windowsFunctionNameRegex.exec(context[3]);
 			if (match[1]) {
-				functionName = match[1] === anonymousObjectName ? logFunctionNameAnonymousObjectAlias : functionName;
+				functionName = match[1] === anonymousObjectName ? logFunctionNameAnonymousObjectAlias : match[1];
 			} else {
 				functionName = anonymousObjectName;
 			}
@@ -74,10 +74,13 @@ function parseErrStackLine(line) {
 }
 
 function getCallContext(err, startAt) {
+	// console.log(err.stack);
+	// console.log();
 	// here we can just get the first line starting at the 3rd that has information on the functionName
 	const lines = err.stack.split('\n');
 	for (const line of lines.slice(startAt)) {
 		const parsedLine = parseErrStackLine(line);
+		// console.log(line, parsedLine);
 		if (parsedLine && parsedLine.functionName && parsedLine.functionName !== anonymousObjectName) return parsedLine;
 	}
 }
