@@ -75,12 +75,8 @@ function parseErrStackLine(line) {
 			// probably Windows
 			// because windows paths start with `${driveLetter}:`
 			const match = windowsFunctionNameRegex.exec(context[3]);
-			if (match[1]) {
-				functionName = match[1] === anonymousObjectName ? logFunctionNameAnonymousObjectAlias : match[1];
-			} else {
-				functionName = anonymousObjectName;
-			}
 			filePath = `${context[3][context[3].length - 1]}:${tmp}`;
+			functionName = match[1] ? match[1] : anonymousObjectName;
 		}
 		return { filePath, functionName, lineNumber, rowNumber };
 	} catch (err) {
@@ -96,7 +92,8 @@ function getCallContext(err, startAt) {
 	for (const line of lines.slice(startAt)) {
 		const parsedLine = parseErrStackLine(line);
 		// console.log(line, parsedLine);
-		if (parsedLine && parsedLine.functionName && parsedLine.functionName !== anonymousObjectName) return parsedLine;
+		// if (parsedLine && parsedLine.functionName && parsedLine.functionName !== anonymousObjectName) return parsedLine;
+		if (parsedLine && parsedLine.functionName) return parsedLine;
 	}
 }
 
@@ -107,6 +104,7 @@ function parseErr(err, considerLine = ignoreNodeModulesErrors ? (parsedLine) => 
 		// this kind of assumes no error can arise from a node_module lol, let's say it's less likely than your code breaking when in development
 		// at least that's the behavior when ignoreNodeModulesErrors is true
 		const parsedLine = parseErrStackLine(line);
+		// console.log(line, parsedLine);
 		if (parsedLine && considerLine(parsedLine)) return parsedLine;
 	}
 	return null;
@@ -131,7 +129,7 @@ function getFormattedTime() {
 
 const defaultLogFormat = (logContext, ...args) => {
 	const { type, typeColor, filePath, functionName, lineNumber } = logContext;
-	return `${typeColor}${getFormattedTime()} [${type}]${colors.Reset} ${logFilenamesFormat(filePath)} - Line ${lineNumber} (${colors['FgGreen']}${functionName}${colors['Reset']}):`;
+	return `${typeColor}${getFormattedTime()} [${type}]${colors.Reset} ${logFilenamesFormat(filePath)} - Line ${lineNumber} (${colors['FgGreen']}${functionName === anonymousObjectName ? logFunctionNameAnonymousObjectAlias : functionName}${colors['Reset']}):`;
 };
 const defaultFormatArgsForInfo = (logContext, ...args) => args.join(' ');
 const defaultFormatArgsForWarn = (logContext, ...args) => args.join(' ');
