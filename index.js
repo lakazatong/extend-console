@@ -117,7 +117,7 @@ function formatErr(err) {
 	
 	if (!parsedErr || Object.values(parsedErr).every(e => !e)) return errorNameAndMessage;
 
-	const match = parsedErr.functionName.match(functionNameAsRegex);
+	const match = parsedErr.functionName?.match(functionNameAsRegex);
 	if (match) {
 		parsedErr.functionName = `${match[1]}.${match[2]}`;
 	} else if (parsedErr.functionName === anonymousObjectName) {
@@ -138,7 +138,7 @@ function getFormattedTime() {
 const defaultLogFormat = (logContext, ...args) => {
 	const { type, typeColor, filePath, functionName: rawFunctionName, lineNumber } = logContext;
 	let functionName = rawFunctionName;
-	const match = functionName.match(functionNameAsRegex);
+	const match = functionName?.match(functionNameAsRegex);
 	if (match) {
 		functionName = `${match[1]}.${match[2]}`;
 	} else if (functionName === anonymousObjectName) {
