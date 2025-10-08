@@ -28,7 +28,7 @@ function getFilenamesFormatFunction(format, projectRoot) {
 	}
 }
 
-const config = JSON.parse(fs.readFileSync(configPath, 'utf8'))[packageName];
+const config = JSON.parse(fs.readFileSync(configPath, 'utf8'))[packageName] || {};
 const defaultConfig = require(configPath)[packageName];
 
 let envConfig = {};
